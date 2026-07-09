@@ -1,0 +1,84 @@
+# ============================================================
+#   NRI STUDIO — .gitignore
+#   Protects ALL sensitive data, secrets & build artifacts
+# ============================================================
+
+# ── 🔐 SECRETS & CREDENTIALS (NEVER COMMIT) ─────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+serviceAccountKey.json
+firebase-adminsdk*.json
+google-credentials.json
+
+# ── 📦 Dependencies ──────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── 🔨 Build Outputs ─────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+out/
+*.tsbuildinfo
+
+# ── 🧪 Testing ───────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+
+# ── 📋 Logs ──────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── 💻 OS & Editor ───────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── 🛠️ IDE & Editor configs ───────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── ⚡ Vite ───────────────────────────────────────────────────
+*.local
+
+# ── 🐛 Debug ─────────────────────────────────────────────────
+.cache/
+.parcel-cache/
+.temp/
+tmp/
+temp/
+
+# ── 🚀 Deployment ────────────────────────────────────────────
+.vercel
+.netlify
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
