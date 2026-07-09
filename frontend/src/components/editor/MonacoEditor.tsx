@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import Editor, { OnMount } from '@monaco-editor/react';
+import Editor, { useMonaco, OnMount } from '@monaco-editor/react';
 import { useEditorStore } from '../../store/editorStore';
 import { projectsApi } from '../../api/files.api';
 
@@ -8,6 +8,7 @@ interface MonacoEditorProps {
 }
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({ projectId }) => {
+  const monaco = useMonaco();
   const editorRef = useRef<any>(null);
   
   const { tabs, activeTabId, updateTabContent, markTabClean, fontSize, theme } = useEditorStore();
@@ -32,6 +33,30 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({ projectId }) => {
 
     return () => clearTimeout(saveTimer);
   }, [activeTab?.content, activeTab?.isDirty, projectId]);
+
+  // Configure IntelliSense
+  useEffect(() => {
+    if (monaco) {
+      // @ts-ignore
+      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: false,
+        noSyntaxValidation: false,
+      });
+
+      // @ts-ignore
+      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+        // @ts-ignore
+        target: monaco.languages.typescript.ScriptTarget.ES2020,
+        allowNonTsExtensions: true,
+        // @ts-ignore
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        // @ts-ignore
+        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        noEmit: true,
+        esModuleInterop: true,
+      });
+    }
+  }, [monaco]);
 
   const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
     editorRef.current = editor;

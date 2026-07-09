@@ -9,6 +9,8 @@ import {
   deleteFile,
   deleteProject,
   executeCode,
+  renameProject,
+  renameFile,
 } from '../controllers/files.controller';
 
 const router = Router();
@@ -25,8 +27,14 @@ router.get('/projects/:id', getProject);
 // POST   /api/files/projects          — Create new project
 router.post('/projects', createProject);
 
+// PATCH  /api/files/projects/:id/rename — Rename project
+router.patch('/projects/:id/rename', renameProject);
+
 // PATCH  /api/files/projects/:id/file — Save/update a file in project
 router.patch('/projects/:id/file', updateFile);
+
+// PATCH  /api/files/projects/:id/file/rename — Rename a file
+router.patch('/projects/:id/file/rename', renameFile);
 
 // DELETE /api/files/projects/:id/file — Delete a file from project
 router.delete('/projects/:id/file', deleteFile);

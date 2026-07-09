@@ -24,6 +24,14 @@ export const projectsApi = {
     await apiClient.patch(`/files/projects/${projectId}/file`, file);
   },
 
+  renameProject: async (projectId: string, projectName: string): Promise<void> => {
+    await apiClient.patch(`/files/projects/${projectId}/rename`, { projectName });
+  },
+
+  renameFile: async (projectId: string, oldPath: string, newPath: string): Promise<void> => {
+    await apiClient.patch(`/files/projects/${projectId}/file/rename`, { oldPath, newPath });
+  },
+
   deleteFile: async (projectId: string, path: string): Promise<void> => {
     await apiClient.delete(`/files/projects/${projectId}/file`, { data: { path } });
   },

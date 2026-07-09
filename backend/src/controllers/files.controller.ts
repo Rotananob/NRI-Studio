@@ -6,6 +6,7 @@ import {
   createProjectSchema,
   updateFileSchema,
   codeExecutionSchema,
+  renameFileSchema,
 } from '../utils/validators';
 import { executeJavaScript } from '../utils/codeSandbox';
 
@@ -136,6 +137,83 @@ export async function updateFile(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('updateFile error:', error);
     res.status(500).json({ error: 'InternalError', message: 'Failed to save file' });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PATCH /api/files/projects/:id/rename
+// ─────────────────────────────────────────────────────────────
+export async function renameProject(req: Request, res: Response): Promise<void> {
+  try {
+    const { uid } = req as AuthenticatedRequest;
+    const { id } = req.params;
+    const { projectName } = req.body;
+
+    if (!projectName || typeof projectName !== 'string' || projectName.trim().length === 0) {
+      res.status(400).json({ error: 'ValidationError', message: 'Invalid project name' });
+      return;
+    }
+
+    const project = await Project.findOneAndUpdate(
+      { _id: id, ownerId: uid },
+      { $set: { projectName: projectName.trim() } },
+      { new: true }
+    );
+
+    if (!project) {
+      res.status(404).json({ error: 'NotFound', message: 'Project not found' });
+      return;
+    }
+
+    res.json({ message: 'Project renamed', project });
+  } catch (error) {
+    console.error('renameProject error:', error);
+    res.status(500).json({ error: 'InternalError', message: 'Failed to rename project' });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PATCH /api/files/projects/:id/file/rename
+// ─────────────────────────────────────────────────────────────
+export async function renameFile(req: Request, res: Response): Promise<void> {
+  try {
+    const { uid } = req as AuthenticatedRequest;
+    const { id } = req.params;
+
+    const parsed = renameFileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'ValidationError', details: parsed.error.flatten() });
+      return;
+    }
+
+    const { oldPath, newPath } = parsed.data;
+
+    const project = await Project.findOne({ _id: id, ownerId: uid });
+    if (!project) {
+      res.status(404).json({ error: 'NotFound', message: 'Project not found' });
+      return;
+    }
+
+    const fileIndex = project.files.findIndex((f) => f.path === oldPath);
+    if (fileIndex === -1) {
+      res.status(404).json({ error: 'NotFound', message: 'File not found' });
+      return;
+    }
+
+    // Check if newPath already exists
+    if (project.files.some((f) => f.path === newPath)) {
+      res.status(409).json({ error: 'Conflict', message: 'File with new name already exists' });
+      return;
+    }
+
+    project.files[fileIndex].path = newPath;
+    project.files[fileIndex].lastModified = new Date();
+    await project.save();
+
+    res.json({ message: 'File renamed', oldPath, newPath });
+  } catch (error) {
+    console.error('renameFile error:', error);
+    res.status(500).json({ error: 'InternalError', message: 'Failed to rename file' });
   }
 }
 

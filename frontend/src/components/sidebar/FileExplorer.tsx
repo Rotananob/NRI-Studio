@@ -8,10 +8,24 @@ const FileExplorer: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const { openTab } = useEditorStore();
+  
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    type: 'project' | 'file';
+    projectId: string;
+    file?: ProjectFile;
+    project?: Project;
+  }>({ visible: false, x: 0, y: 0, type: 'project', projectId: '' });
+
+  const { openTab, closeTab, tabs } = useEditorStore();
 
   useEffect(() => {
     loadProjects();
+    const handleGlobalClick = () => setContextMenu((prev) => ({ ...prev, visible: false }));
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
   }, []);
 
   const loadProjects = async () => {
@@ -102,6 +116,63 @@ const FileExplorer: React.FC = () => {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, type: 'project' | 'file', project: Project, file?: ProjectFile) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.pageX,
+      y: e.pageY,
+      type,
+      projectId: project._id,
+      project,
+      file
+    });
+  };
+
+  const handleRename = async () => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+    if (contextMenu.type === 'project' && contextMenu.project) {
+      const newName = prompt('Enter new project name:', contextMenu.project.projectName);
+      if (newName && newName !== contextMenu.project.projectName) {
+        await projectsApi.renameProject(contextMenu.projectId, newName);
+        loadProjects();
+      }
+    } else if (contextMenu.type === 'file' && contextMenu.file) {
+      const newName = prompt('Enter new file name:', contextMenu.file.path);
+      if (newName && newName !== contextMenu.file.path) {
+        await projectsApi.renameFile(contextMenu.projectId, contextMenu.file.path, newName);
+        // Also close the old tab if it was open, or let the user handle it?
+        // Actually, if we rename a file, we should close its old tab so it doesn't break
+        const tabId = `${contextMenu.projectId}-${contextMenu.file.path}`;
+        if (tabs.find(t => t.id === tabId)) {
+          closeTab(tabId);
+        }
+        loadProjects();
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    setContextMenu(prev => ({ ...prev, visible: false }));
+    if (contextMenu.type === 'project' && contextMenu.project) {
+      if (confirm(`Are you sure you want to delete project "${contextMenu.project.projectName}"?`)) {
+        await projectsApi.delete(contextMenu.projectId);
+        
+        // Close all tabs related to this project
+        tabs.filter(t => t.projectId === contextMenu.projectId).forEach(t => closeTab(t.id));
+        loadProjects();
+      }
+    } else if (contextMenu.type === 'file' && contextMenu.file) {
+      if (confirm(`Are you sure you want to delete file "${contextMenu.file.path}"?`)) {
+        await projectsApi.deleteFile(contextMenu.projectId, contextMenu.file.path);
+        
+        const tabId = `${contextMenu.projectId}-${contextMenu.file.path}`;
+        closeTab(tabId);
+        loadProjects();
+      }
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}><Loader2 size={20} className="spinner" /></div>;
   }
@@ -123,6 +194,7 @@ const FileExplorer: React.FC = () => {
             {/* Project Folder Row */}
             <div 
               onClick={() => toggleProject(proj._id)}
+              onContextMenu={(e) => handleContextMenu(e, 'project', proj)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -152,6 +224,7 @@ const FileExplorer: React.FC = () => {
                   <div
                     key={file.path}
                     onClick={() => handleOpenFile(proj, file)}
+                    onContextMenu={(e) => handleContextMenu(e, 'file', proj, file)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -184,6 +257,42 @@ const FileExplorer: React.FC = () => {
           <button onClick={handleCreateProject} style={{ marginTop: '10px', padding: '5px 10px', background: 'var(--accent-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             Create First Project
           </button>
+        </div>
+      )}
+
+      {/* Custom Context Menu */}
+      {contextMenu.visible && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            backgroundColor: '#252526',
+            border: '1px solid #454545',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            zIndex: 1000,
+            padding: '5px 0',
+            borderRadius: '4px',
+            minWidth: '150px'
+          }}
+          onClick={(e) => e.stopPropagation()} // Prevent clicking menu from closing it immediately
+        >
+          <div 
+            onClick={handleRename}
+            style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0060a0')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            Rename {contextMenu.type === 'project' ? 'Project' : 'File'}
+          </div>
+          <div 
+            onClick={handleDelete}
+            style={{ padding: '8px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#f48771' }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0060a0')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            Delete {contextMenu.type === 'project' ? 'Project' : 'File'}
+          </div>
         </div>
       )}
     </div>

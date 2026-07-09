@@ -24,7 +24,13 @@ export const codeExecutionSchema = z.object({
   code: z.string().min(1).max(50_000), // 50KB max
 });
 
+export const renameFileSchema = z.object({
+  oldPath: z.string().min(1).max(500),
+  newPath: z.string().min(1).max(500),
+});
+
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type CodeExecutionInput = z.infer<typeof codeExecutionSchema>;
+export type RenameFileInput = z.infer<typeof renameFileSchema>;
