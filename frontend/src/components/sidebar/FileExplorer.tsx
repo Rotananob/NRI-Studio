@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Folder, Plus, Loader2, FilePlus, FileJson, FileCode, FileText, FileImage, File } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronRight, ChevronDown, Plus, Loader2, FilePlus, FileJson, FileCode, FileText, FileImage, File, Upload, X, Box } from 'lucide-react';
 import { projectsApi } from '../../api/files.api';
 import { Project, FileEntry as ProjectFile } from '../../types/file.types';
 import { useEditorStore } from '../../store/editorStore';
@@ -7,7 +7,10 @@ import { useEditorStore } from '../../store/editorStore';
 const FileExplorer: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  
+  // Single active workspace mode
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState({ openEditors: true, project: true });
   
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -19,7 +22,8 @@ const FileExplorer: React.FC = () => {
     project?: Project;
   }>({ visible: false, x: 0, y: 0, type: 'project', projectId: '' });
 
-  const { openTab, closeTab, tabs } = useEditorStore();
+  const { openTab, closeTab, tabs, activeTabId, setActiveTab } = useEditorStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadProjects();
@@ -55,29 +59,17 @@ const FileExplorer: React.FC = () => {
     }
   };
 
-  const loadProjects = async () => {
+  const loadProjects = async (idToSelect?: string) => {
     try {
       setLoading(true);
       const data = await projectsApi.getAll();
       setProjects(data);
-      if (data.length > 0) {
-        setExpandedProjects(new Set([data[0]._id]));
-      }
+      if (idToSelect) setActiveProjectId(idToSelect);
     } catch (err) {
       console.error('Failed to load projects:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleProject = (projectId: string) => {
-    const newExpanded = new Set(expandedProjects);
-    if (newExpanded.has(projectId)) {
-      newExpanded.delete(projectId);
-    } else {
-      newExpanded.add(projectId);
-    }
-    setExpandedProjects(newExpanded);
   };
 
   const handleOpenFile = (project: Project, file: ProjectFile) => {
@@ -97,19 +89,57 @@ const FileExplorer: React.FC = () => {
     if (!name) return;
     try {
       const newProj = await projectsApi.create({ projectName: name, language: 'javascript' });
-      setProjects([...projects, newProj]);
-      setExpandedProjects(new Set([...expandedProjects, newProj._id]));
+      await loadProjects(newProj._id);
     } catch (err) {
       console.error('Failed to create project:', err);
     }
   };
 
+  const handleUploadFolder = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // The first file's webkitRelativePath contains the folder name: "FolderName/file.js"
+    const firstPath = files[0].webkitRelativePath || files[0].name;
+    const folderName = firstPath.split('/')[0] || 'Uploaded Project';
+
+    try {
+      setLoading(true);
+      const newProj = await projectsApi.create({ projectName: folderName, language: 'javascript' });
+      
+      // Upload files sequentially (to avoid rate limits, though parallel is faster)
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const relativePath = file.webkitRelativePath || file.name;
+        // Strip the root folder name from the path for cleaner internal structure
+        const pathInsideProject = relativePath.substring(folderName.length + 1) || file.name;
+        
+        if (file.size > 1024 * 1024) continue; // Skip files > 1MB
+
+        const content = await file.text();
+        let language = 'plaintext';
+        if (file.name.endsWith('.js')) language = 'javascript';
+        if (file.name.endsWith('.ts')) language = 'typescript';
+        if (file.name.endsWith('.html')) language = 'html';
+        if (file.name.endsWith('.css')) language = 'css';
+        if (file.name.endsWith('.json')) language = 'json';
+
+        await projectsApi.saveFile(newProj._id, { path: pathInsideProject, content, language });
+      }
+
+      await loadProjects(newProj._id);
+    } catch (err) {
+      console.error('Failed to upload folder:', err);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+    }
+  };
+
   const handleCreateFile = async (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation(); // Prevent folder toggle
+    e.stopPropagation(); 
     const fileName = prompt('Enter file name (e.g., index.js):');
     if (!fileName) return;
     
-    // Determine language by extension
     let language = 'plaintext';
     if (fileName.endsWith('.js')) language = 'javascript';
     if (fileName.endsWith('.ts')) language = 'typescript';
@@ -123,9 +153,8 @@ const FileExplorer: React.FC = () => {
         content: '// New file\n',
         language,
       });
-      await loadProjects(); // Refresh to get the new file
+      await loadProjects(); 
       
-      // Auto open it
       openTab({
         id: `${projectId}-${fileName}`,
         projectId: projectId,
@@ -135,9 +164,7 @@ const FileExplorer: React.FC = () => {
         language,
         isDirty: false,
       });
-      
-      // Ensure folder is expanded
-      setExpandedProjects(new Set([...expandedProjects, projectId]));
+      setExpandedSections(prev => ({ ...prev, project: true }));
     } catch (err) {
       console.error('Failed to create file:', err);
     }
@@ -145,15 +172,7 @@ const FileExplorer: React.FC = () => {
 
   const handleContextMenu = (e: React.MouseEvent, type: 'project' | 'file', project: Project, file?: ProjectFile) => {
     e.preventDefault();
-    setContextMenu({
-      visible: true,
-      x: e.pageX,
-      y: e.pageY,
-      type,
-      projectId: project._id,
-      project,
-      file
-    });
+    setContextMenu({ visible: true, x: e.pageX, y: e.pageY, type, projectId: project._id, project, file });
   };
 
   const handleRename = async () => {
@@ -168,12 +187,8 @@ const FileExplorer: React.FC = () => {
       const newName = prompt('Enter new file name:', contextMenu.file.path);
       if (newName && newName !== contextMenu.file.path) {
         await projectsApi.renameFile(contextMenu.projectId, contextMenu.file.path, newName);
-        // Also close the old tab if it was open, or let the user handle it?
-        // Actually, if we rename a file, we should close its old tab so it doesn't break
         const tabId = `${contextMenu.projectId}-${contextMenu.file.path}`;
-        if (tabs.find(t => t.id === tabId)) {
-          closeTab(tabId);
-        }
+        if (tabs.find(t => t.id === tabId)) closeTab(tabId);
         loadProjects();
       }
     }
@@ -184,15 +199,13 @@ const FileExplorer: React.FC = () => {
     if (contextMenu.type === 'project' && contextMenu.project) {
       if (confirm(`Are you sure you want to delete project "${contextMenu.project.projectName}"?`)) {
         await projectsApi.delete(contextMenu.projectId);
-        
-        // Close all tabs related to this project
         tabs.filter(t => t.projectId === contextMenu.projectId).forEach(t => closeTab(t.id));
+        if (activeProjectId === contextMenu.projectId) setActiveProjectId(null);
         loadProjects();
       }
     } else if (contextMenu.type === 'file' && contextMenu.file) {
       if (confirm(`Are you sure you want to delete file "${contextMenu.file.path}"?`)) {
         await projectsApi.deleteFile(contextMenu.projectId, contextMenu.file.path);
-        
         const tabId = `${contextMenu.projectId}-${contextMenu.file.path}`;
         closeTab(tabId);
         loadProjects();
@@ -204,59 +217,134 @@ const FileExplorer: React.FC = () => {
     return <div style={{ padding: '20px', textAlign: 'center' }}><Loader2 size={20} className="spinner" /></div>;
   }
 
-  return (
-    <div style={{ padding: '10px 0', fontSize: '13px', color: 'var(--text-main)', height: '100%', overflowY: 'auto' }}>
-      <div style={{ padding: '0 15px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Projects</span>
-        <button onClick={handleCreateProject} className="icon-btn" style={{ width: 'auto', height: 'auto', padding: '2px' }} title="New Project">
-          <Plus size={14} />
-        </button>
-      </div>
+  // Find the active project object
+  const activeProject = projects.find(p => p._id === activeProjectId);
 
-      {projects.map((proj) => {
-        const isExpanded = expandedProjects.has(proj._id);
-        
-        return (
-          <div key={proj._id}>
-            {/* Project Folder Row */}
-            <div 
-              onClick={() => toggleProject(proj._id)}
-              onContextMenu={(e) => handleContextMenu(e, 'project', proj)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '4px 10px',
-                cursor: 'pointer',
-                backgroundColor: isExpanded ? 'var(--bg-hover)' : 'transparent',
-              }}
-            >
-              {isExpanded ? <ChevronDown size={14} style={{ marginRight: '5px' }} /> : <ChevronRight size={14} style={{ marginRight: '5px' }} />}
-              <Folder size={14} style={{ marginRight: '5px', color: 'var(--accent-color)' }} />
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proj.projectName}</span>
-              
-              <button 
-                onClick={(e) => handleCreateFile(e, proj._id)}
-                className="icon-btn" 
-                style={{ width: 'auto', height: 'auto', padding: '2px', marginLeft: '5px' }} 
-                title="New File"
+  return (
+    <div style={{ padding: '0', fontSize: '13px', color: 'var(--text-main)', height: '100%', overflowY: 'auto' }}>
+      {/* NO ACTIVE PROJECT - SHOW PROJECT LIST */}
+      {!activeProject && (
+        <div style={{ padding: '15px' }}>
+          <h4 style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '15px' }}>Your Projects</h4>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {projects.map(proj => (
+              <div 
+                key={proj._id}
+                onClick={() => setActiveProjectId(proj._id)}
+                onContextMenu={(e) => handleContextMenu(e, 'project', proj)}
+                style={{ 
+                  display: 'flex', alignItems: 'center', padding: '8px 10px', 
+                  backgroundColor: 'var(--bg-hover)', borderRadius: '4px', cursor: 'pointer' 
+                }}
               >
-                <FilePlus size={14} />
-              </button>
+                <Box size={16} style={{ marginRight: '10px', color: 'var(--accent-color)' }} />
+                <span style={{ flex: 1, fontWeight: 500 }}>{proj.projectName}</span>
+              </div>
+            ))}
+          </div>
+
+          {projects.length === 0 && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', marginTop: '20px' }}>No projects found.</p>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+            <button 
+              onClick={handleCreateProject}
+              style={{ padding: '8px', background: 'var(--accent-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}
+            >
+              <Plus size={16} /> New Project
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              style={{ padding: '8px', background: 'var(--bg-hover)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}
+            >
+              <Upload size={16} /> Upload Folder
+            </button>
+            {/* hidden file input for folder upload */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              onChange={handleUploadFolder} 
+              // @ts-ignore (webkitdirectory is standard but often missing in React types)
+              webkitdirectory="true" 
+              directory="true" 
+              multiple 
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ACTIVE PROJECT VIEW (VSCODE STYLE) */}
+      {activeProject && (
+        <div>
+          {/* OPEN EDITORS ACCORDION */}
+          <div>
+            <div 
+              onClick={() => setExpandedSections(prev => ({ ...prev, openEditors: !prev.openEditors }))}
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border-color)', borderTop: '1px solid var(--border-color)' }}
+            >
+              {expandedSections.openEditors ? <ChevronDown size={14} style={{ marginRight: '5px' }} /> : <ChevronRight size={14} style={{ marginRight: '5px' }} />}
+              <span style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-main)' }}>Open Editors</span>
+            </div>
+            
+            {expandedSections.openEditors && (
+              <div style={{ padding: '5px 0' }}>
+                {tabs.map(tab => (
+                  <div
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', padding: '4px 10px 4px 25px', cursor: 'pointer',
+                      backgroundColor: activeTabId === tab.id ? 'var(--bg-hover)' : 'transparent',
+                      color: activeTabId === tab.id ? 'var(--text-main)' : 'var(--text-muted)'
+                    }}
+                    className="file-row"
+                  >
+                    <X size={14} onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }} style={{ marginRight: '5px', opacity: 0.6 }} />
+                    {getFileIcon(tab.label)}
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tab.label}
+                    </span>
+                  </div>
+                ))}
+                {tabs.length === 0 && <div style={{ padding: '4px 25px', color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic' }}>No open editors</div>}
+              </div>
+            )}
+          </div>
+
+          {/* PROJECT FILES ACCORDION */}
+          <div>
+            <div 
+              onClick={() => setExpandedSections(prev => ({ ...prev, project: !prev.project }))}
+              onContextMenu={(e) => handleContextMenu(e, 'project', activeProject)}
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 10px', cursor: 'pointer', backgroundColor: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border-color)' }}
+              className="project-header"
+            >
+              {expandedSections.project ? <ChevronDown size={14} style={{ marginRight: '5px' }} /> : <ChevronRight size={14} style={{ marginRight: '5px' }} />}
+              <span style={{ flex: 1, fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {activeProject.projectName}
+              </span>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                <button onClick={(e) => handleCreateFile(e, activeProject._id)} className="icon-btn" style={{ width: 'auto', height: 'auto', padding: '2px' }} title="New File">
+                  <FilePlus size={14} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setActiveProjectId(null); }} className="icon-btn" style={{ width: 'auto', height: 'auto', padding: '2px', marginLeft: '5px' }} title="Close Project">
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
-            {/* Files List */}
-            {isExpanded && (
-              <div style={{ paddingLeft: '15px' }}>
-                {proj.files.map((file) => (
+            {expandedSections.project && (
+              <div style={{ padding: '5px 0' }}>
+                {activeProject.files.map(file => (
                   <div
                     key={file.path}
-                    onClick={() => handleOpenFile(proj, file)}
-                    onContextMenu={(e) => handleContextMenu(e, 'file', proj, file)}
+                    onClick={() => handleOpenFile(activeProject, file)}
+                    onContextMenu={(e) => handleContextMenu(e, 'file', activeProject, file)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '4px 10px 4px 25px',
-                      cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', padding: '4px 10px 4px 25px', cursor: 'pointer',
                       color: 'var(--text-muted)'
                     }}
                     className="file-row"
@@ -267,23 +355,14 @@ const FileExplorer: React.FC = () => {
                     </span>
                   </div>
                 ))}
-                {proj.files.length === 0 && (
-                  <div style={{ padding: '4px 10px 4px 25px', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '11px' }}>
-                    No files found
+                {activeProject.files.length === 0 && (
+                  <div style={{ padding: '4px 25px', color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic' }}>
+                    No files found. Click + to create one.
                   </div>
                 )}
               </div>
             )}
           </div>
-        );
-      })}
-      
-      {projects.length === 0 && (
-        <div style={{ padding: '20px 15px', textAlign: 'center', color: 'var(--text-muted)' }}>
-          <p>No projects yet.</p>
-          <button onClick={handleCreateProject} style={{ marginTop: '10px', padding: '5px 10px', background: 'var(--accent-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            Create First Project
-          </button>
         </div>
       )}
 
@@ -291,18 +370,12 @@ const FileExplorer: React.FC = () => {
       {contextMenu.visible && (
         <div 
           style={{
-            position: 'absolute',
-            top: contextMenu.y,
-            left: contextMenu.x,
-            backgroundColor: '#252526',
-            border: '1px solid #454545',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            zIndex: 1000,
-            padding: '5px 0',
-            borderRadius: '4px',
-            minWidth: '150px'
+            position: 'absolute', top: contextMenu.y, left: contextMenu.x,
+            backgroundColor: '#252526', border: '1px solid #454545',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 1000,
+            padding: '5px 0', borderRadius: '4px', minWidth: '150px'
           }}
-          onClick={(e) => e.stopPropagation()} // Prevent clicking menu from closing it immediately
+          onClick={(e) => e.stopPropagation()}
         >
           <div 
             onClick={handleRename}

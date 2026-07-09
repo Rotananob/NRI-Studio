@@ -9,7 +9,15 @@
     "start": "node dist/server.js",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["ide", "code-editor", "nri-studio"],
+  "keywords": [
+    "ide",
+    "code-editor",
+    "nri-studio"
+  ],
   "author": "NRI Studio",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "helmet": "^8.2.0"
+  }
 }
