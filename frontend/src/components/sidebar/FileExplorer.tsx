@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, File, Folder, Plus, Loader2, FilePlus } from 'lucide-react';
 import { projectsApi } from '../../api/files.api';
-import { Project, File as ProjectFile } from '../../types/file.types';
+import { Project, FileEntry as ProjectFile } from '../../types/file.types';
 import { useEditorStore } from '../../store/editorStore';
 
 const FileExplorer: React.FC = () => {

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import Editor, { useMonaco, OnMount } from '@monaco-editor/react';
+import Editor, { OnMount } from '@monaco-editor/react';
 import { useEditorStore } from '../../store/editorStore';
 import { projectsApi } from '../../api/files.api';
 
@@ -8,7 +8,6 @@ interface MonacoEditorProps {
 }
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({ projectId }) => {
-  const monaco = useMonaco();
   const editorRef = useRef<any>(null);
   
   const { tabs, activeTabId, updateTabContent, markTabClean, fontSize, theme } = useEditorStore();

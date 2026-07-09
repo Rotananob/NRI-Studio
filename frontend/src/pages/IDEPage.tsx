@@ -14,13 +14,16 @@ import {
 import FileExplorer from '../components/sidebar/FileExplorer';
 import TabBar from '../components/tabs/TabBar';
 import MonacoEditor from '../components/editor/MonacoEditor';
+import TerminalPanel from '../components/editor/TerminalPanel';
+import { useEditorStore } from '../store/editorStore';
 import '../styles/ide.css';
 
 const IDEPage: React.FC = () => {
   const { user, setFirebaseUser, setUser } = useAuthStore();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'explorer' | 'search' | 'settings'>('explorer');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile, open on desktop
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -61,6 +64,13 @@ const IDEPage: React.FC = () => {
             </button>
           </div>
           <div>
+            <button 
+              className={`icon-btn ${isTerminalOpen ? 'active' : ''}`}
+              onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+              title="Terminal"
+            >
+              <TerminalSquare size={24} />
+            </button>
             <button className="icon-btn" title="Settings" onClick={() => toggleSidebar('settings')}>
               <Settings size={24} />
             </button>
@@ -107,6 +117,11 @@ const IDEPage: React.FC = () => {
             <div style={{ flex: 1, position: 'relative' }}>
               <MonacoEditor projectId={useEditorStore.getState().activeTabId?.split('-')[0]} />
             </div>
+            {isTerminalOpen && (
+              <div style={{ height: '30%', minHeight: '200px', borderTop: '1px solid var(--border-color)' }}>
+                <TerminalPanel onClose={() => setIsTerminalOpen(false)} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -125,7 +140,10 @@ const IDEPage: React.FC = () => {
         >
           <Search size={20} />
         </button>
-        <button className="icon-btn">
+        <button 
+          className={`icon-btn ${isTerminalOpen ? 'active' : ''}`}
+          onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+        >
           <TerminalSquare size={20} />
         </button>
         <button className="icon-btn" onClick={handleLogout}>
