@@ -135,7 +135,10 @@ const IDEPage: React.FC = () => {
             <button className="icon-btn" style={{ width: 'auto' }} onClick={() => setIsSidebarOpen(true)}>
               <Menu size={20} />
             </button>
-            <span style={{ fontSize: '13px', marginLeft: '10px', fontWeight: 600 }}>NRI Studio</span>
+            <span style={{ fontSize: '13px', marginLeft: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <img src="/logo.png" alt="NRI Studio" style={{ width: '18px', height: '18px', borderRadius: '4px' }} />
+              NRI Studio
+            </span>
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -179,9 +182,10 @@ const IDEPage: React.FC = () => {
 
       {/* Desktop Status Bar */}
       <div className="ide-status-bar">
-        <div>
-          <span style={{ marginRight: '15px' }}>NRI Studio</span>
-          <span style={{ cursor: 'pointer' }}>main*</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.png" alt="NRI Studio" style={{ width: '14px', height: '14px', borderRadius: '2px', marginRight: '8px' }} />
+          <span style={{ marginRight: '15px', fontWeight: 600 }}>NRI Studio</span>
+          <span style={{ cursor: 'pointer', color: 'var(--accent-color)' }}>main*</span>
         </div>
         <div>
           <span style={{ marginRight: '15px' }}>Ln 1, Col 1</span>

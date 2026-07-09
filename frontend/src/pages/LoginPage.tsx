@@ -30,7 +30,10 @@ const LoginPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#1e1e2e', color: '#fff' }}>
-      <h1>Login to NRI Studio</h1>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+        <img src="/logo.png" alt="NRI Studio Logo" style={{ width: '80px', height: '80px', borderRadius: '12px', marginBottom: '15px', boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)' }} />
+        <h1 style={{ margin: 0, fontSize: '24px' }}>Login to NRI Studio</h1>
+      </div>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '300px' }}>
         <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={{ padding: '10px' }} />
