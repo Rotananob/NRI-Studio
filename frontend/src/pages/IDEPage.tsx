@@ -19,7 +19,7 @@ import { useEditorStore } from '../store/editorStore';
 import '../styles/ide.css';
 
 const IDEPage: React.FC = () => {
-  const { user, setFirebaseUser, setUser } = useAuthStore();
+  const { user, isGuest, reset } = useAuthStore();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'explorer' | 'search' | 'settings'>('explorer');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -52,9 +52,10 @@ const IDEPage: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    await auth.signOut();
-    setFirebaseUser(null);
-    setUser(null);
+    if (!isGuest) {
+      await auth.signOut();
+    }
+    reset();
     navigate('/login');
   };
 
@@ -124,7 +125,7 @@ const IDEPage: React.FC = () => {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {activeView === 'explorer' && <FileExplorer />}
             {activeView === 'search' && <div style={{ padding: '15px' }}>Search functionality coming soon...</div>}
-            {activeView === 'settings' && <div style={{ padding: '15px' }}>Settings (Logged in as {user?.displayName})</div>}
+            {activeView === 'settings' && <div style={{ padding: '15px' }}>Settings (Logged in as {isGuest ? 'Guest' : user?.displayName})</div>}
           </div>
         </div>
 
@@ -190,7 +191,7 @@ const IDEPage: React.FC = () => {
         <div>
           <span style={{ marginRight: '15px' }}>Ln 1, Col 1</span>
           <span style={{ marginRight: '15px' }}>UTF-8</span>
-          <span>{user?.displayName}</span>
+          <span>{isGuest ? 'Guest' : user?.displayName}</span>
         </div>
       </div>
     </div>

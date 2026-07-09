@@ -15,8 +15,12 @@ import {
 
 const router = Router();
 
-// All file routes require auth
-router.use(verifyFirebaseToken);
+// Public routes (Rate limited)
+// POST   /api/files/execute           — Run code in sandbox
+router.post('/execute', codeExecRateLimiter, executeCode);
+
+// All project routes require auth
+router.use('/projects', verifyFirebaseToken);
 
 // GET    /api/files/projects          — List user's projects
 router.get('/projects', getProjects);
@@ -41,8 +45,5 @@ router.delete('/projects/:id/file', deleteFile);
 
 // DELETE /api/files/projects/:id      — Delete entire project
 router.delete('/projects/:id', deleteProject);
-
-// POST   /api/files/execute           — Run code in sandbox
-router.post('/execute', codeExecRateLimiter, executeCode);
 
 export default router;
