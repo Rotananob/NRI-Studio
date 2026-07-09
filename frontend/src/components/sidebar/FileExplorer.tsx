@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, File, Folder, Plus, Loader2, FilePlus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, Plus, Loader2, FilePlus, FileJson, FileCode, FileText, FileImage, File } from 'lucide-react';
 import { projectsApi } from '../../api/files.api';
 import { Project, FileEntry as ProjectFile } from '../../types/file.types';
 import { useEditorStore } from '../../store/editorStore';
@@ -27,6 +27,33 @@ const FileExplorer: React.FC = () => {
     window.addEventListener('click', handleGlobalClick);
     return () => window.removeEventListener('click', handleGlobalClick);
   }, []);
+
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'js':
+        return <FileCode size={14} style={{ marginRight: '5px', color: '#f7df1e' }} />;
+      case 'ts':
+      case 'tsx':
+        return <FileCode size={14} style={{ marginRight: '5px', color: '#3178c6' }} />;
+      case 'html':
+        return <FileCode size={14} style={{ marginRight: '5px', color: '#e34c26' }} />;
+      case 'css':
+        return <FileCode size={14} style={{ marginRight: '5px', color: '#264de4' }} />;
+      case 'json':
+        return <FileJson size={14} style={{ marginRight: '5px', color: '#cb3837' }} />;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'svg':
+        return <FileImage size={14} style={{ marginRight: '5px', color: '#a074c4' }} />;
+      case 'md':
+      case 'txt':
+        return <FileText size={14} style={{ marginRight: '5px', color: '#519aba' }} />;
+      default:
+        return <File size={14} style={{ marginRight: '5px', color: 'var(--text-muted)' }} />;
+    }
+  };
 
   const loadProjects = async () => {
     try {
@@ -234,7 +261,7 @@ const FileExplorer: React.FC = () => {
                     }}
                     className="file-row"
                   >
-                    <File size={14} style={{ marginRight: '5px' }} />
+                    {getFileIcon(file.path.split('/').pop() || '')}
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {file.path.split('/').pop()}
                     </span>
