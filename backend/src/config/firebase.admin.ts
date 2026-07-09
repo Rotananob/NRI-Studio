@@ -1,9 +1,10 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, getApp, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 let initialized = false;
 
 export function initFirebaseAdmin(): void {
-  if (initialized) return;
+  if (initialized || getApps().length > 0) return;
 
   const {
     FIREBASE_PROJECT_ID,
@@ -22,22 +23,23 @@ export function initFirebaseAdmin(): void {
     );
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: FIREBASE_PROJECT_ID,
-      privateKeyId: FIREBASE_PRIVATE_KEY_ID,
-      // Replace escaped newlines from .env string
-      privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      clientEmail: FIREBASE_CLIENT_EMAIL,
-      clientId: FIREBASE_CLIENT_ID,
-      authUri: FIREBASE_AUTH_URI,
-      tokenUri: FIREBASE_TOKEN_URI,
-      clientCertUrl: FIREBASE_CLIENT_X509_CERT_URL,
-    } as admin.ServiceAccount),
-  });
+  const credential = cert({
+    projectId: FIREBASE_PROJECT_ID,
+    privateKeyId: FIREBASE_PRIVATE_KEY_ID,
+    // Replace escaped newlines from .env string
+    privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    clientEmail: FIREBASE_CLIENT_EMAIL,
+    clientId: FIREBASE_CLIENT_ID,
+    authUri: FIREBASE_AUTH_URI,
+    tokenUri: FIREBASE_TOKEN_URI,
+    clientCertUrl: FIREBASE_CLIENT_X509_CERT_URL,
+  } as any);
+
+  initializeApp({ credential });
 
   initialized = true;
   console.log('✅ Firebase Admin SDK initialized');
 }
 
-export { admin };
+export const adminAuth = () => getAuth();
+

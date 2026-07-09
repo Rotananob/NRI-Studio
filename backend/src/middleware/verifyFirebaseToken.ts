@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { admin } from '../config/firebase.admin';
+import { adminAuth } from '../config/firebase.admin';
 
 export interface AuthenticatedRequest extends Request {
   uid: string;
@@ -35,7 +35,7 @@ export async function verifyFirebaseToken(
     }
 
     // Verify token with Firebase Admin SDK
-    const decodedToken = await admin.auth().verifyIdToken(idToken, true);
+    const decodedToken = await adminAuth().verifyIdToken(idToken, true);
 
     // Attach user info to request
     (req as AuthenticatedRequest).uid = decodedToken.uid;
