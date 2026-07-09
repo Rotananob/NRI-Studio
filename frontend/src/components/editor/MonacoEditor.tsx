@@ -87,7 +87,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({ projectId }) => {
   if (!activeTab) {
     return (
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-        <img src="/vite.svg" alt="Logo" style={{ width: '80px', marginBottom: '20px', opacity: 0.5 }} />
+        <img src="/logo.png" alt="NRI Studio Logo" style={{ width: '100px', height: '100px', borderRadius: '15px', marginBottom: '20px', opacity: 0.2, filter: 'grayscale(50%)' }} />
         <h1 style={{ fontWeight: 400, color: 'var(--text-muted)' }}>No File is Open</h1>
         <p style={{ fontSize: '12px', color: '#555', marginTop: '10px' }}>Select a file from the explorer to start editing.</p>
       </div>
