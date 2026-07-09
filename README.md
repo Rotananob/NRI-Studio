@@ -1,142 +1,86 @@
-# 🖥️ NRI Studio — Web-Based IDE
-
-> A full-stack, VSCode-like code editor running in the browser. Responsive for Laptop, Tablet & Phone.
-
-![NRI Studio](https://img.shields.io/badge/NRI-Studio-007acc?style=for-the-badge&logo=visualstudiocode)
-![React](https://img.shields.io/badge/React-18-61dafb?style=flat-square&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript)
-![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=flat-square&logo=node.js)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47a248?style=flat-square&logo=mongodb)
-![Firebase](https://img.shields.io/badge/Firebase-Auth-ffca28?style=flat-square&logo=firebase)
+<div align="center">
+  <img src="./frontend/public/logo.png" alt="NRI Studio Logo" width="120" />
+  <h1>NRI Studio</h1>
+  <p><strong>A Modern, Cloud-Based VSCode-Style Web IDE</strong></p>
+</div>
 
 ---
+
+## 🚀 Overview
+**NRI Studio** is a full-stack, browser-based Integrated Development Environment (IDE) that closely mimics the behavior and UI of VSCode. Built for modern web development, it allows users to create, edit, save, and execute JavaScript and TypeScript code entirely in the cloud.
 
 ## ✨ Features
+- **VSCode-like UI**: Dark theme, collapsible sidebar, multi-tab support, and a dedicated status bar.
+- **Monaco Editor Integration**: Full IntelliSense, syntax highlighting, code auto-completion, and live error checking.
+- **Single Workspace Explorer**: Dedicated project view with "Open Editors" and "Project Files" accordions.
+- **Local Folder Upload**: Seamlessly import your local projects into the cloud workspace.
+- **Live Terminal & Sandbox Execution**: Run JS/TS code directly in the browser via a secure Node.js backend sandbox.
+- **Real-Time Auto-Save**: Never lose your progress. Code is auto-saved to MongoDB seamlessly.
+- **Firebase Authentication**: Secure email/password and Google login.
 
-- 🎨 **Monaco Editor** — Same engine as Visual Studio Code
-- 🔐 **Firebase Authentication** — Secure login/register with JWT
-- 🗄️ **MongoDB Atlas** — Cloud storage for all user projects & files
-- 📁 **File Explorer** — Create, rename, delete files & folders
-- 📑 **Multi-Tab Editor** — Open multiple files with dirty state indicator
-- ▶️ **Code Execution** — Run JavaScript in a sandboxed environment
-- 💻 **Terminal Panel** — Integrated terminal UI (xterm.js)
-- 🌗 **Dark / Light Theme** — VSCode Dark+ inspired by default
-- 📱 **Fully Responsive** — Works on Laptop, Tablet & Phone
-
----
-
-## 🏛️ Architecture
-
-```
-frontend/   → React + TypeScript + Vite  (Port 5173)
-backend/    → Node.js + Express + TypeScript  (Port 3001)
-```
-
-**Security Layers:**
-- Firebase JWT verified on every API request
-- User data 100% isolated (User A cannot access User B's data)
-- Rate limiting, Helmet.js, CORS, Zod input validation
-- Code runs in sandboxed child process (no system access)
+## 🛠️ Technology Stack
+- **Frontend**: React 18, TypeScript, Vite, Zustand, Monaco Editor, Xterm.js
+- **Backend**: Node.js, Express, TypeScript, Zod, Helmet, Cors
+- **Database**: MongoDB (Mongoose)
+- **Authentication**: Firebase Auth & Admin SDK
 
 ---
 
-## 🚀 Getting Started
+## 💻 Local Development
 
-### Prerequisites
-- Node.js v20+
-- MongoDB Atlas account
-- Firebase project
-
-### 1. Clone the repo
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Rotananob/NRI-Studio.git
 cd NRI-Studio
 ```
 
-### 2. Setup Backend
+### 2. Setup Environment Variables
+- In the `backend/` folder, create a `.env` file containing your `MONGODB_URI` and Firebase credentials.
+- In the `frontend/` folder, create a `.env` file containing your `VITE_FIREBASE_*` config.
+
+### 3. Run the Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Fill in your credentials in .env
 npm run dev
 ```
 
-### 3. Setup Frontend
+### 4. Run the Frontend
 ```bash
 cd frontend
 npm install
-cp .env.example .env
-# Fill in your Firebase config in .env
 npm run dev
 ```
 
-### 4. Open in browser
-```
-http://localhost:5173
-```
-
 ---
 
-## ⚙️ Environment Variables
+## 🚀 Deployment Guide
 
-### Backend (`backend/.env`)
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Server port (default: 3001) |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `FIREBASE_PROJECT_ID` | Firebase project ID |
-| `FIREBASE_PRIVATE_KEY` | Firebase Admin private key |
-| `FIREBASE_CLIENT_EMAIL` | Firebase Admin client email |
-| `ALLOWED_ORIGINS` | Frontend URL (default: http://localhost:5173) |
+NRI Studio is configured for 1-click deployment!
 
-### Frontend (`frontend/.env`)
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API URL |
-| `VITE_FIREBASE_API_KEY` | Firebase web API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID |
+### 1. Backend (Render)
+We have provided a `render.yaml` file at the root.
+1. Go to [Render.com](https://render.com)
+2. Click **New +** > **Blueprint**
+3. Connect this GitHub repository.
+4. Render will automatically detect the `render.yaml` and deploy the Node.js API.
+5. *Don't forget to add your MongoDB and Firebase environment variables in the Render Dashboard!*
 
-> ⚠️ **Never commit `.env` files.** See `.env.example` for templates.
+**Backend Live URL:** `https://your-backend-url.onrender.com`
 
----
+### 2. Frontend (Vercel)
+We have provided a `vercel.json` file in the `frontend` folder.
+1. Go to [Vercel.com](https://vercel.com)
+2. Click **Add New** > **Project**
+3. Connect this GitHub repository.
+4. Set the **Framework Preset** to `Vite`.
+5. Set the **Root Directory** to `frontend`.
+6. Add your Firebase Environment Variables.
+7. Click **Deploy**.
 
-## 📁 Project Structure
+**Frontend Live URL:** `https://nri-studio.vercel.app` (Example)
 
-```
-NRI-Studio/
-├── frontend/               # React + TypeScript (Vite)
-│   └── src/
-│       ├── api/            # Axios API modules
-│       ├── components/     # UI components
-│       ├── pages/          # Route pages
-│       ├── store/          # Zustand state
-│       └── types/          # TypeScript types
-│
-└── backend/                # Node.js + Express + TypeScript
-    └── src/
-        ├── config/         # Firebase Admin + MongoDB
-        ├── controllers/    # Route handlers
-        ├── middleware/     # Auth, rate limit, error
-        ├── models/         # Mongoose schemas
-        ├── routes/         # API routes
-        └── utils/          # Validators, sandbox
-```
+> **Important:** Once you deploy the backend, make sure to update the `VITE_API_URL` in your Vercel frontend settings to point to your new Render Backend URL!
 
 ---
-
-## 🛡️ Security
-
-- 🔐 Firebase JWT verification on every protected route
-- 🚫 Rate limiting: 100 req/15min (API), 10 req/15min (auth)
-- 🛡️ Helmet.js security headers
-- ✅ Zod input validation & sanitization
-- 🏖️ Code sandbox: isolated child process, 5s timeout, no system access
-- 🔒 CORS: whitelist only
-
----
-
-## 📄 License
-
-MIT © NRI Studio
+*Developed with ❤️ by Nob Rothana*
