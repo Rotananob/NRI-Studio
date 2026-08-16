@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth.routes';
 import fileRoutes from './routes/files.routes';
 import userRoutes from './routes/user.routes';
+import { verifyAppCheck } from './middleware/verifyAppCheck';
 
 const app = express();
 
@@ -41,7 +42,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Firebase-AppCheck'],
   })
 );
 
@@ -56,6 +57,11 @@ if (process.env.NODE_ENV !== 'test') {
 
 // ── Rate Limiting ─────────────────────────────────────────────
 app.use('/api', apiRateLimiter);
+
+// ── App Check Verification ────────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api', verifyAppCheck);
+}
 
 // ── Health Check ──────────────────────────────────────────────
 app.get('/health', (_req, res) => {

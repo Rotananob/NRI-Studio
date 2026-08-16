@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { auth } from '../firebase';
+import { auth, appCheck } from '../firebase';
+import { getToken } from 'firebase/app-check';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api',
@@ -18,6 +19,16 @@ apiClient.interceptors.request.use(
         console.error('Failed to get Firebase token:', err);
       }
     }
+    
+    if (appCheck) {
+      try {
+        const appCheckTokenResponse = await getToken(appCheck, false);
+        config.headers['X-Firebase-AppCheck'] = appCheckTokenResponse.token;
+      } catch (err) {
+        console.error('App Check token error:', err);
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
