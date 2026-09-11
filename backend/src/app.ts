@@ -59,8 +59,11 @@ if (process.env.NODE_ENV !== 'test') {
 app.use('/api', apiRateLimiter);
 
 // ── App Check Verification ────────────────────────────────────
+// Note: Only apply to /files and /user routes, NOT /auth routes
+// because App Check token may not be ready during login/sync
 if (process.env.NODE_ENV === 'production') {
-  app.use('/api', verifyAppCheck);
+  app.use('/api/files', verifyAppCheck);
+  app.use('/api/user', verifyAppCheck);
 }
 
 // ── Health Check ──────────────────────────────────────────────

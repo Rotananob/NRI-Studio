@@ -25,7 +25,8 @@ apiClient.interceptors.request.use(
         const appCheckTokenResponse = await getToken(appCheck, false);
         config.headers['X-Firebase-AppCheck'] = appCheckTokenResponse.token;
       } catch (err) {
-        console.error('App Check token error:', err);
+        // App Check token failed — continue without it (backend will reject if enforced)
+        console.warn('App Check token error (non-fatal):', err);
       }
     }
     
